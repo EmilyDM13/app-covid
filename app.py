@@ -160,6 +160,37 @@ st.subheader('Casos totales a lo largo del tiempo')
 st.plotly_chart(fig_casos)
 
 
+
+# ----- Gráfico de muertes totales a lo largo del tiempo -----
+
+# Agrupar por fecha y sumar los casos totales
+muertes_totales_por_fecha = (
+    datos_filtrados
+    .groupby('Fecha')['Muertes totales']
+    .sum()
+    .reset_index()
+)
+
+# Crear el gráfico de líneas para casos totales
+fig_muertes = px.line(
+    muertes_totales_por_fecha, 
+    x='Fecha', 
+    y='Muertes totales', 
+    title='Muertes totales a lo largo del tiempo',
+    labels={'Muertes totales': 'Cantidad de muertes totales', 'Fecha': 'Fecha'}
+)
+
+# Ajustar el formato del eje x para mostrar la fecha completa
+fig_muertes.update_xaxes(
+    tickformat="%Y-%m-%d",  # Formato de año-mes-día
+    title_text="Fecha"
+)
+
+# Mostrar el gráfico
+st.subheader('Muertes totales a lo largo del tiempo')
+st.plotly_chart(fig_muertes)
+
+
 # ----- Mapa de coropletas con folium -----
 
 # Agrupar los casos totales por país (última fecha disponible o filtrados)
