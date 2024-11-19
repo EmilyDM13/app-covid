@@ -282,3 +282,102 @@ folium_static(mapa)
 
 # Forma nueva
 # st_folium(mapa, width=725)
+
+
+
+# ----- Mapa de coropletas con folium -----
+
+# Agrupar los casos totales por país (última fecha disponible o filtrados)
+if pais_seleccionado != 'Todos':
+    muertes_totales_por_pais = (
+        datos_filtrados
+        .groupby('Código ISO')['Muertes totales']
+        .max()
+        .reset_index()
+    )
+else:
+    muertes_totales_por_pais = (
+        datos
+        .groupby('Código ISO')['Muertes totales']
+        .max()
+        .reset_index()
+    )
+
+# Unir los datos de casos con el GeoDataFrame de países
+paises_merged = paises.merge(
+    muertes_totales_por_pais, 
+    how='left', 
+    left_on='ADM0_ISO', 
+    right_on='Código ISO'
+)
+
+# Reemplazar valores nulos por cero en 'Casos totales'
+paises_merged['Muertes totales'] = paises_merged['Muertes totales'].fillna(0)
+
+# Crear el mapa base
+if pais_seleccionado != 'Todos':
+    # Obtener el Código ISO del país seleccionado
+    codigo_iso = codigo_iso_seleccionado
+    # Filtrar el GeoDataFrame para obtener la geometría del país
+    pais_geom = paises_merged[paises_merged['ADM0_ISO'] == codigo_iso]
+    if not pais_geom.empty:
+        # Obtener el centroide de la geometría del país
+        centroid = pais_geom.geometry.centroid.iloc[0]
+        coordenadas = [centroid.y, centroid.x]
+        zoom_level = 5
+    else:
+        # Valores por defecto si no se encuentra el país
+        coordenadas = [0, 0]
+        zoom_level = 2
+else:
+    coordenadas = [0, 0]
+    zoom_level = 1
+
+mapa = folium.Map(location=coordenadas, zoom_start=zoom_level)
+
+# Crear una paleta de colores
+from branca.colormap import linear
+paleta_colores = linear.YlOrRd_09.scale(paises_merged['Muertes totales'].min(), paises_merged['Muertes totales'].max())
+
+# Añadir los polígonos al mapa
+folium.GeoJson(
+    paises_merged,
+    name='Muertes totales por país',
+    style_function=lambda feature: {
+        'fillColor': paleta_colores(feature['properties']['Muertes totales']),
+        'color': 'black',
+        'weight': 0.5,
+        'fillOpacity': 0.7,
+    },
+    highlight_function=lambda feature: {
+        'weight': 3,
+        'color': 'black',
+        'fillOpacity': 0.9,
+    },
+    tooltip=folium.features.GeoJsonTooltip(
+        fields=['ADM0_ISO', 'Muertes totales'],
+        aliases=['Código ISO: ', 'Muertes totales: '],
+        localize=True
+    )
+).add_to(mapa)
+
+# Añadir la leyenda al mapa
+paleta_colores.caption = 'Muertes totales por país'
+paleta_colores.add_to(mapa)
+
+# Agregar el control de capas al mapa
+folium.LayerControl().add_to(mapa)
+
+# Mostrar el mapa
+st.subheader('Mapa de muertes totales por país')
+
+# Forma antigua
+folium_static(mapa)
+
+# Forma nueva
+# st_folium(mapa, width=725)
+
+
+
+
+
